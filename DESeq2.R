@@ -48,9 +48,48 @@ write.csv(res_Cd_Sig,"American_canker_vs_healthy.csv")
 # 226 upregulated and 10 downregulated in American canker compared to American healthy
 
 # vienn diagram of overlap DEGs
-Cd_up
-Cd_down
-Cm_up
-Cm_down
-All_up
-All_down
+library(VennDiagram)
+Cd_up <- rownames(res_Cd_Sig[which(res_Cd_Sig$log2FoldChange>0),])
+Cd_down <- rownames(res_Cd_Sig[which(res_Cd_Sig$log2FoldChange<0),])
+Cm_up <- rownames(res_Cm_Sig[which(res_Cm_Sig$log2FoldChange>0),])
+Cm_down <- rownames(res_Cm_Sig[which(res_Cm_Sig$log2FoldChange<0),])
+All_up <- rownames(res_Sig[which(res_Sig$log2FoldChange>0),])
+All_down <- rownames(res_Sig[which(res_Sig$log2FoldChange<0),])
+
+# upregulation genes
+area1=length(All_up)
+area2=length(Cd_up)
+area3=length(Cm_up)
+
+#---pairs
+n12=length(intersect(All_up,Cd_up))
+n13=length(intersect(All_up,Cm_up))
+n23=length(intersect(Cd_up,Cm_up))
+
+#---trios
+n123=length(Reduce(intersect,list(All_up,Cd_up,Cm_up)))
+
+grid.newpage()
+draw.triple.venn(area1, area2, area3, n12, n13, n23, n123,
+                 scaled=FALSE, 
+                 fill=c("red", "blue","yellow"), 
+                 c("ALL", "American","Chinese"))
+
+# downregulation genes
+area1=length(All_down)
+area2=length(Cd_down)
+area3=length(Cm_down)
+
+#---pairs
+n12=length(intersect(All_down,Cd_down))
+n13=length(intersect(All_down,Cm_down))
+n23=length(intersect(Cd_down,Cm_down))
+
+#---trios
+n123=length(Reduce(intersect,list(All_down,Cd_down,Cm_down)))
+
+grid.newpage()
+draw.triple.venn(area1, area2, area3, n12, n13, n23, n123,
+                 scaled=FALSE, 
+                 fill=c("red", "blue","yellow"), 
+                 c("ALL", "American","Chinese"))

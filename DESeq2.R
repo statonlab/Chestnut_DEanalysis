@@ -9,6 +9,16 @@ sample_types = c("American","American","American","Chinese","Chinese","Chinese",
 condition = c("canker","healthy","healthy","canker","healthy","healthy","healthy","healthy","healthy","healthy")
 MydataDesign = data.frame(row.names = colnames(mydata), species = sample_types, conditions = condition)
 MydataDesign
+# Read functional annotation file
+ips <- read.table("data/Cm_aa_v4.1_pfam.tsv", check.names = F,stringsAsFactors = F, header = F, sep = '\t',fill = TRUE)
+KOALA <- read.table("data/chestnut_annotations.txt", check.names = F, stringsAsFactors = F, header = T, sep = '\t')
+# remove duplicate genes/isoforms
+ips$V1 <- gsub('.t\\d','',ips$V1)
+ips_dedup <- ips[-which(duplicated(ips$V1)), c(1,13,14)]
+KOALA$gene_callers_id <- paste0("Cm_",KOALA$gene_callers_id)
+KOALA$gene_callers_id <- gsub('.t\\d','',KOALA$gene_callers_id)
+KOALA_dedup <- KOALA[-which(duplicated(KOALA$gene_callers_id)),c(1,3,4)]
+
 # DESeq
 dds = DESeqDataSetFromMatrix(countData = mydata, colData = MydataDesign, design = ~species+conditions)
 dim(dds)
@@ -22,7 +32,10 @@ summary(res)
 # 181 genes upregulated and 19 downregulated in canker
 
 res_Sig <- data.frame(res[which(res$padj<0.05),])
-write.csv(res_Sig,"canker_vs_healthy_all.csv")
+res_Sig_anno <- merge(res_Sig, ips_dedup, by.x = "row.names", by.y = 'V1', all.x = T)
+res_Sig_anno <- merge(res_Sig_anno, KOALA_dedup, by.x ="Row.names", by.y = 'gene_callers_id', all.x = T)
+names(res_Sig_anno)[8:11] <- c("pfam","GO","KEGG","KEGG.function")
+write.csv(res_Sig_anno,"canker_vs_healthy_all.csv")
 
 # heatmap of the top 50 DEGs comparing canker and healthy
 rl.heatmap <- assay(rld[rownames(res[order(res$padj), ])[1:50], ])
@@ -37,14 +50,20 @@ ddsMF = DESeq(ddsMF)
 res_Cm <- results(ddsMF, contrast = c("inter", "Chinese_canker","Chinese_healthy"), lfcThreshold = 1, alpha = 0.05)
 summary(res_Cm)
 res_Cm_Sig <- data.frame(res_Cm[which(res_Cm$padj<0.05),])
-write.csv(res_Cm_Sig,"Chinese_canker_vs_healthy.csv")
+res_Cm_Sig_anno <- merge(res_Cm_Sig, ips_dedup, by.x = "row.names", by.y = 'V1', all.x = T)
+res_Cm_Sig_anno <- merge(res_Cm_Sig_anno, KOALA_dedup, by.x ="Row.names", by.y = 'gene_callers_id', all.x = T)
+names(res_Cm_Sig_anno)[8:11] <- c("pfam","GO","KEGG","KEGG.function")
+write.csv(res_Cm_Sig_anno,"Chinese_canker_vs_healthy.csv")
 # 86 upregulated and 6 downregulated genes in Chinese canker compared to Chinese healthy
 
 # American canker vs healthy
 res_Cd <- results(ddsMF, contrast = c("inter","American_canker", "American_healthy"), lfcThreshold = 1, alpha = 0.05)
 summary(res_Cd)
 res_Cd_Sig <- data.frame(res_Cd[which(res_Cd$padj<0.05),])
-write.csv(res_Cd_Sig,"American_canker_vs_healthy.csv")
+res_Cd_Sig_anno <- merge(res_Cd_Sig, ips_dedup, by.x = "row.names", by.y = 'V1', all.x = T)
+res_Cd_Sig_anno <- merge(res_Cd_Sig_anno, KOALA_dedup, by.x ="Row.names", by.y = 'gene_callers_id', all.x = T)
+names(res_Cd_Sig_anno)[8:11] <- c("pfam","GO","KEGG","KEGG.function")
+write.csv(res_Cd_Sig_anno,"American_canker_vs_healthy.csv")
 # 226 upregulated and 10 downregulated in American canker compared to American healthy
 
 # vienn diagram of overlap DEGs

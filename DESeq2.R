@@ -12,12 +12,20 @@ MydataDesign
 # Read functional annotation file
 ips <- read.table("data/Cm_aa_v4.1_pfam.tsv", check.names = F,stringsAsFactors = F, header = F, sep = '\t',fill = TRUE)
 KOALA <- read.table("data/chestnut_annotations.txt", check.names = F, stringsAsFactors = F, header = T, sep = '\t')
+blast <- read.table("data/chestnut2peach.blast.txt", check.names = F, stringsAsFactors = F, header = F)
+peach_annot <- read.csv("../../Apricot/Ppersica_298_v2.1.annotation_info.txt", header = TRUE, comment.char = '', sep='\t')
 # remove duplicate genes/isoforms
 ips$V1 <- gsub('.t\\d','',ips$V1)
 ips_dedup <- ips[-which(duplicated(ips$V1)), c(1,13,14)]
 KOALA$gene_callers_id <- paste0("Cm_",KOALA$gene_callers_id)
 KOALA$gene_callers_id <- gsub('.t\\d','',KOALA$gene_callers_id)
 KOALA_dedup <- KOALA[-which(duplicated(KOALA$gene_callers_id)),c(1,3,4)]
+blast$V1 <- gsub(".t\\d","",blast$V1) # remove chestnut isoforms
+blast$V2 <- gsub('0\\.\\d*','0',blast$V2) # remove peach isoforms
+blast_dedup <- blast[!duplicated(blast[,1:2]),][,c(1,2,11)]
+names(blast_dedup) <- c("Cm_ID","Ppe_ID","Evalue")
+blast_dedup_annot <- merge(blast_dedup, peach_annot[,c(2,11,12,13)], by.x = "Ppe_ID", by.y = "locusName", all.x=T)
+blast_dedup_annot <- blast_dedup_annot[!duplicated(blast_dedup_annot),]
 
 # DESeq
 dds = DESeqDataSetFromMatrix(countData = mydata, colData = MydataDesign, design = ~species+conditions)
@@ -35,6 +43,7 @@ res_Sig <- data.frame(res[which(res$padj<0.05),])
 res_Sig_anno <- merge(res_Sig, ips_dedup, by.x = "row.names", by.y = 'V1', all.x = T)
 res_Sig_anno <- merge(res_Sig_anno, KOALA_dedup, by.x ="Row.names", by.y = 'gene_callers_id', all.x = T)
 names(res_Sig_anno)[8:11] <- c("pfam","GO","KEGG","KEGG.function")
+res_Sig_anno <- merge(res_Sig_anno, blast_dedup_annot, by.x="Row.names",by.y = "Cm_ID", all.x=T)
 write.csv(res_Sig_anno,"canker_vs_healthy_all.csv")
 
 # heatmap of the top 50 DEGs comparing canker and healthy
@@ -53,6 +62,7 @@ res_Cm_Sig <- data.frame(res_Cm[which(res_Cm$padj<0.05),])
 res_Cm_Sig_anno <- merge(res_Cm_Sig, ips_dedup, by.x = "row.names", by.y = 'V1', all.x = T)
 res_Cm_Sig_anno <- merge(res_Cm_Sig_anno, KOALA_dedup, by.x ="Row.names", by.y = 'gene_callers_id', all.x = T)
 names(res_Cm_Sig_anno)[8:11] <- c("pfam","GO","KEGG","KEGG.function")
+res_Cm_Sig_anno <- merge(res_Cm_Sig_anno, blast_dedup_annot, by.x="Row.names",by.y = "Cm_ID", all.x=T)
 write.csv(res_Cm_Sig_anno,"Chinese_canker_vs_healthy.csv")
 # 86 upregulated and 6 downregulated genes in Chinese canker compared to Chinese healthy
 
@@ -63,6 +73,7 @@ res_Cd_Sig <- data.frame(res_Cd[which(res_Cd$padj<0.05),])
 res_Cd_Sig_anno <- merge(res_Cd_Sig, ips_dedup, by.x = "row.names", by.y = 'V1', all.x = T)
 res_Cd_Sig_anno <- merge(res_Cd_Sig_anno, KOALA_dedup, by.x ="Row.names", by.y = 'gene_callers_id', all.x = T)
 names(res_Cd_Sig_anno)[8:11] <- c("pfam","GO","KEGG","KEGG.function")
+res_Cd_Sig_anno <- merge(res_Cd_Sig_anno, blast_dedup_annot, by.x="Row.names",by.y = "Cm_ID", all.x=T)
 write.csv(res_Cd_Sig_anno,"American_canker_vs_healthy.csv")
 # 226 upregulated and 10 downregulated in American canker compared to American healthy
 

@@ -1,6 +1,7 @@
 setwd("~/Desktop/Jiali/UTK/chestnut/Chestnut_DEanalysis")
 
 library(DESeq2)
+library(Rmisc)
 
 # Read count files
 mydata <- read.table("data/gene_counts.txt", check.names = F, stringsAsFactors = F, header = TRUE, row.names = 1)
@@ -123,3 +124,32 @@ draw.triple.venn(area1, area2, area3, n12, n13, n23, n123,
                  scaled=FALSE, 
                  fill=c("red", "blue","yellow"), 
                  c("ALL", "American","Chinese"))
+
+## 20190930 ------ plot gene expression og given genes
+# Functions for plotting
+x = "Cm_g21596"
+drawPlot <- function(x) {
+  data <- plotCounts(dds, gene=x,intgroup=c("species","conditions"), returnData=TRUE)
+  datasum <- summarySE(data, measurevar = "count", groupvars = c("species","conditions"))
+  datasum$conditions <- factor(datasum$conditions, levels = c("healthy", "canker"))
+  plot <-
+    ggplot(datasum, aes(x=species, y=count, fill=conditions)) +
+    geom_bar(stat = "identity",position=position_dodge()) + geom_errorbar(aes(ymin=count-se,ymax=count+se), width=0.1, position=position_dodge(.9))+
+    labs(title = x) + ylab("Normalized expression") +
+    scale_fill_manual(values=c('gray20','lightgray')) +
+    theme_classic(base_size = 14)
+  #theme(text = element_text(size=14),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+  
+  print(plot)
+  #  return()
+}
+
+# Cm_g21345, Cm_g19316 - ppa003014m orthologs
+# Cm_g21596
+drawPlot("Cm_g21345")
+ggsave("Cm_g21345.png")
+drawPlot("Cm_g19316")
+ggsave("Cm_g19316.png")
+drawPlot("Cm_g21596")
+ggsave("Cm_g21596.png")
+

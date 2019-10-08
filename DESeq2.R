@@ -2,6 +2,7 @@ setwd("~/Desktop/Jiali/UTK/chestnut/Chestnut_DEanalysis")
 
 library(DESeq2)
 library(Rmisc)
+library(ggplot2)
 
 # Read count files
 mydata <- read.table("data/gene_counts.txt", check.names = F, stringsAsFactors = F, header = TRUE, row.names = 1)
@@ -128,16 +129,16 @@ draw.triple.venn(area1, area2, area3, n12, n13, n23, n123,
 ## 20190930 ------ plot gene expression og given genes
 # Functions for plotting
 x = "Cm_g21596"
-drawPlot <- function(x) {
+drawPlot <- function(x, gene) {
   data <- plotCounts(dds, gene=x,intgroup=c("species","conditions"), returnData=TRUE)
   datasum <- summarySE(data, measurevar = "count", groupvars = c("species","conditions"))
   datasum$conditions <- factor(datasum$conditions, levels = c("healthy", "canker"))
   plot <-
     ggplot(datasum, aes(x=species, y=count, fill=conditions)) +
     geom_bar(stat = "identity",position=position_dodge()) + geom_errorbar(aes(ymin=count-se,ymax=count+se), width=0.1, position=position_dodge(.9))+
-    labs(title = x) + ylab("Normalized expression") +
+    labs(title = paste0(x,"-",gene)) + ylab("Normalized expression") +
     scale_fill_manual(values=c('gray20','lightgray')) +
-    theme_classic(base_size = 14)
+    theme_classic(base_size = 8)
   #theme(text = element_text(size=14),panel.background = element_blank(), axis.line = element_line(colour = "black"))
   
   print(plot)
@@ -153,3 +154,49 @@ ggsave("Cm_g19316.png")
 drawPlot("Cm_g21596")
 ggsave("Cm_g21596.png")
 
+# Get expression of genes from table1 Int. J. Mol. Sci. 2019, 20(16), 3999
+## read chestnut blast to arabidopsis file
+blast_arab <- read.table("data/chestnut2arab.blast.txt", header = F)
+names(blast_arab) <- c("query", "ref", "identity","length", "mismatch","gapopen","qstart","qend","sstart","send","evalue","bitscore")
+## read gene table
+inositol <- read.csv('data/inositol genes.csv', header = T)
+genes_inositol <- inositol[grep("At",inositol$Gene.ID), c(1,2)]
+genes_inositol$Gene.ID <- gsub("t","T",genes_inositol$Gene.ID)
+names(genes_inositol)[2] <- "ref"
+### remove .1, .2....in the arabidopsis IDs, and get the chestnut ID
+blast_arab$ref <- gsub("\\.\\d","",blast_arab$ref)
+chestnut_inositol <- join(genes_inositol, blast_arab[,c(1,2)], by = "ref", match = "all")
+### compute expression data and add into the datafram
+chestnut_inositol$query <- gsub("\\.t\\d","",chestnut_inositol$query)
+chestnut_inositol <- unique(chestnut_inositol)
+chestnut_inositol <- na.omit(chestnut_inositol) # remove rows with NA
+
+### create an empty data frame
+inositol_df <- data.frame(matrix(ncol = 7, nrow = 0))
+names(inositol_df) <- c("name","arab","chestnut","A_canker","A_healthy","C_canker","C_healthy")
+for (i in 1:length(chestnut_inositol$query)) {
+  x = chestnut_inositol$query[i]
+  data <- plotCounts(dds, gene=x,intgroup=c("species","conditions"), returnData=TRUE)
+  datasum <- summarySE(data, measurevar = "count", groupvars = c("species","conditions"))
+  expression <- as.data.frame(c(chestnut_inositol[i,],datasum$count))
+  names(expression) <- c("name","arab","chestnut","A_canker","A_healthy","C_canker","C_healthy")
+  inositol_df <- rbind(inositol_df, expression)
+}
+
+# plot gene expression for each gene after removing the gene without counts
+library(gridExtra)
+filtered_inositol <- inositol_df[which(rowMeans2(inositol_df[,4:7] > 0.5) > 0),]
+p <- list()
+for(i in 1:length(chestnut_inositol$query)){
+  x = chestnut_inositol$query[i]
+  gene_name <- chestnut_inositol$Name[i]
+  p[[i]] <- drawPlot(x,gene_name)
+}
+do.call(grid.arrange,p)
+
+## Build a heatmap
+data <- as.matrix(inositol_df[,4:7])
+rownames(data) <- inositol_df$chestnut
+my_group <- as.numeric(as.factor(substr(inositol_df$name, 1 , 3)))
+colSide <- brewer.pal(9, "Set1")[my_group]
+heatmap(data,RowSideColors = colSide, Colv = NA)

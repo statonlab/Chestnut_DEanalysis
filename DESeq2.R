@@ -131,6 +131,7 @@ draw.triple.venn(area1, area2, area3, n12, n13, n23, n123,
 x = "Cm_g21596"
 drawPlot <- function(x, gene) {
   data <- plotCounts(dds, gene=x,intgroup=c("species","conditions"), returnData=TRUE)
+  data[data == 0.5] <- 0
   datasum <- summarySE(data, measurevar = "count", groupvars = c("species","conditions"))
   datasum$conditions <- factor(datasum$conditions, levels = c("healthy", "canker"))
   plot <-
@@ -151,7 +152,7 @@ drawPlot("Cm_g21345")
 ggsave("Cm_g21345.png")
 drawPlot("Cm_g19316")
 ggsave("Cm_g19316.png")
-drawPlot("Cm_g21596")
+drawPlot("Cm_g21596","gene")
 ggsave("Cm_g21596.png")
 
 # Get expression of genes from table1 Int. J. Mol. Sci. 2019, 20(16), 3999
@@ -183,9 +184,8 @@ for (i in 1:length(chestnut_inositol$query)) {
   inositol_df <- rbind(inositol_df, expression)
 }
 
-# plot gene expression for each gene after removing the gene without counts
+# plot gene expression for each gene
 library(gridExtra)
-filtered_inositol <- inositol_df[which(rowMeans2(inositol_df[,4:7] > 0.5) > 0),]
 p <- list()
 for(i in 1:length(chestnut_inositol$query)){
   x = chestnut_inositol$query[i]

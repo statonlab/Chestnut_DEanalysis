@@ -72,3 +72,18 @@ for(i in 1:length(Peach_inositol_filtered$locusName)){
   p[[i]] <- DrawPlot(x,name)
 }
 do.call(grid.arrange,p)
+
+## Add coordinate to the genes
+setwd("~/Desktop/Jiali/UTK/chestnut/Chestnut_DEanalysis/")
+# read the gene list
+inositol_genes <- read.csv("At_Cm_Pm orthologs.csv", header = T)
+# read gff files
+gff <- read.table("../blast_oak/Castanea_mollissima_scaffolds_v3.2_ALLmRNA.gff", header = F)
+names(gff) <- c("contig", "pipeline","type","start","end","empty1","strand","empty2","gene_name")
+head(gff$gene_name)
+gff$gene_name <- gsub("ID=.*Parent=","",gff$gene_name)
+names(gff)[9] <- "Chestnut"
+names(gff)
+names(inositol_genes)[3] <- "Chestnut"
+inositol_genes <- join(inositol_genes, gff[,c(1,4,5,7,9)],by="Chestnut",match = "first")
+write.csv(inositol_genes, "inositol_genes_coordinate.csv")
